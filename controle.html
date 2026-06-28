@@ -281,6 +281,105 @@
     padding: 2px;
   }
 
+  /* Presets */
+  .preset-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .preset-header .section-title { margin-bottom: 0; }
+  #btnSavePreset {
+    background: #2a2a2a;
+    color: #aaa;
+    border: 1px solid #3a3a3a;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  #btnSavePreset:hover { background: #333; color: #fff; border-color: #555; }
+
+  #presetNameRow {
+    display: none;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  #presetNameRow.visible { display: flex; }
+  #inputPresetName {
+    flex: 1;
+    background: #222;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  #inputPresetName:focus { outline: none; border-color: #888; }
+  .btn-confirm, .btn-cancel {
+    border: none;
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-size: 14px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .btn-confirm { background: #16a34a; color: #fff; }
+  .btn-confirm:hover { background: #15803d; }
+  .btn-cancel  { background: #333; color: #aaa; }
+  .btn-cancel:hover  { background: #444; color: #fff; }
+
+  #presetList { display: flex; flex-direction: column; gap: 6px; }
+  .preset-empty { font-size: 13px; color: #444; text-align: center; padding: 10px 0; }
+
+  .preset-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .preset-load {
+    flex: 1;
+    background: #222;
+    border: 1px solid #333;
+    border-radius: 7px;
+    padding: 9px 12px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .preset-load:hover { background: #2a2a2a; border-color: #555; }
+  .preset-load .p-name { font-size: 14px; color: #fff; font-weight: bold; flex: 1; }
+  .preset-load .p-time { font-size: 13px; color: #555; font-family: 'Arial Black', Arial, sans-serif; }
+  .preset-load .p-mode {
+    font-size: 10px;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    background: #1a1a1a;
+    border-radius: 4px;
+    padding: 2px 6px;
+  }
+  .preset-del {
+    background: none;
+    border: 1px solid #333;
+    color: #555;
+    border-radius: 6px;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .preset-del:hover { background: #3a1010; border-color: #aa3333; color: #ff6666; }
+
   /* Scrollbar */
   .control-panel::-webkit-scrollbar { width: 6px; }
   .control-panel::-webkit-scrollbar-track { background: #111; }
@@ -330,6 +429,22 @@
         <input id="inputTargetMin" type="number" value="0"  min="0" max="59" title="minuto">
         <span class="time-sep">:</span>
         <input id="inputTargetSec" type="number" value="0"  min="0" max="59" title="segundo">
+      </div>
+    </div>
+
+    <!-- Presets -->
+    <div class="section">
+      <div class="preset-header">
+        <div class="section-title">Presets</div>
+        <button id="btnSavePreset">+ Salvar atual</button>
+      </div>
+      <div id="presetNameRow">
+        <input type="text" id="inputPresetName" placeholder="Nome do preset..." maxlength="40">
+        <button class="btn-confirm" id="btnConfirmPreset">✓</button>
+        <button class="btn-cancel"  id="btnCancelPreset">✗</button>
+      </div>
+      <div id="presetList">
+        <div class="preset-empty">Nenhum preset salvo</div>
       </div>
     </div>
 
@@ -635,6 +750,152 @@
     window.open('display.html', 'cronometro-display');
     setTimeout(broadcast, 500);
   });
+
+  // ── Presets ────────────────────────────────────────────────────
+  const STORAGE_KEY = 'cronometro_presets';
+
+  function loadPresets() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+
+  function savePresets(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  function fmtPresetTime(p) {
+    if (p.mode === 'duration') {
+      const h = parseInt(p.hrs) || 0;
+      const m = parseInt(p.min) || 0;
+      const s = parseInt(p.sec) || 0;
+      if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+      return `${pad(m)}:${pad(s)}`;
+    }
+    return `${pad(p.targetHr)}:${pad(p.targetMin)}:${pad(p.targetSec)}`;
+  }
+
+  function renderPresets() {
+    const list = loadPresets();
+    const container = document.getElementById('presetList');
+    container.innerHTML = '';
+
+    if (list.length === 0) {
+      container.innerHTML = '<div class="preset-empty">Nenhum preset salvo</div>';
+      return;
+    }
+
+    list.forEach((p) => {
+      const item = document.createElement('div');
+      item.className = 'preset-item';
+
+      const loadBtn = document.createElement('button');
+      loadBtn.className = 'preset-load';
+      loadBtn.innerHTML = `
+        <span class="p-mode">${p.mode === 'duration' ? 'duração' : 'horário'}</span>
+        <span class="p-name">${p.name}</span>
+        <span class="p-time">${fmtPresetTime(p)}</span>
+      `;
+      loadBtn.addEventListener('click', () => applyPreset(p));
+
+      const delBtn = document.createElement('button');
+      delBtn.className = 'preset-del';
+      delBtn.textContent = '×';
+      delBtn.title = 'Remover preset';
+      delBtn.addEventListener('click', () => {
+        const updated = loadPresets().filter(x => x.id !== p.id);
+        savePresets(updated);
+        renderPresets();
+      });
+
+      item.appendChild(loadBtn);
+      item.appendChild(delBtn);
+      container.appendChild(item);
+    });
+  }
+
+  function applyPreset(p) {
+    if (running) return;
+    reset();
+
+    if (p.mode === 'duration') {
+      mode = 'duration';
+      btnModeDuration.classList.add('active');
+      btnModeTarget.classList.remove('active');
+      durationInputs.style.display = 'flex';
+      targetInputs.style.display   = 'none';
+      inputHrs.value = p.hrs;
+      inputMin.value = p.min;
+      inputSec.value = p.sec;
+    } else {
+      mode = 'target';
+      btnModeTarget.classList.add('active');
+      btnModeDuration.classList.remove('active');
+      durationInputs.style.display = 'none';
+      targetInputs.style.display   = 'flex';
+      inputTargetHr.value  = p.targetHr;
+      inputTargetMin.value = p.targetMin;
+      inputTargetSec.value = p.targetSec;
+    }
+
+    if (p.label) {
+      inputLabel.value = p.label;
+      previewLabel.textContent = p.label;
+    }
+    broadcast();
+  }
+
+  function getCurrentPresetData(name) {
+    return {
+      id: Date.now(),
+      name,
+      mode,
+      hrs:       inputHrs.value,
+      min:       inputMin.value,
+      sec:       inputSec.value,
+      targetHr:  inputTargetHr.value,
+      targetMin: inputTargetMin.value,
+      targetSec: inputTargetSec.value,
+      label:     inputLabel.value,
+    };
+  }
+
+  const btnSavePreset    = document.getElementById('btnSavePreset');
+  const presetNameRow    = document.getElementById('presetNameRow');
+  const inputPresetName  = document.getElementById('inputPresetName');
+  const btnConfirmPreset = document.getElementById('btnConfirmPreset');
+  const btnCancelPreset  = document.getElementById('btnCancelPreset');
+
+  btnSavePreset.addEventListener('click', () => {
+    presetNameRow.classList.add('visible');
+    inputPresetName.value = '';
+    inputPresetName.focus();
+    btnSavePreset.style.display = 'none';
+  });
+
+  function confirmSave() {
+    const name = inputPresetName.value.trim();
+    if (!name) { inputPresetName.focus(); return; }
+    const list = loadPresets();
+    list.push(getCurrentPresetData(name));
+    savePresets(list);
+    renderPresets();
+    presetNameRow.classList.remove('visible');
+    btnSavePreset.style.display = '';
+  }
+
+  function cancelSave() {
+    presetNameRow.classList.remove('visible');
+    btnSavePreset.style.display = '';
+  }
+
+  btnConfirmPreset.addEventListener('click', confirmSave);
+  btnCancelPreset.addEventListener('click', cancelSave);
+  inputPresetName.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmSave();
+    if (e.key === 'Escape') cancelSave();
+  });
+
+  renderPresets();
 
   // Broadcast initial state
   broadcast();
