@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Cronômetro</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: 'Arial Black', Arial, sans-serif;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  #time {
+    font-size: 30vw;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    transition: font-size 0.3s, color 0.3s;
+  }
+  #time.has-hours { font-size: 18vw; }
+  #time.overtime { color: #ff4400; }
+
+  #label {
+    font-size: 4vw;
+    font-weight: 900;
+    color: #fff;
+    margin-top: 1vw;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 0 8px;
+    transition: color 0.3s;
+  }
+  #label.overtime { color: #ff4400; }
+
+  #customText {
+    font-size: 3vw;
+    font-weight: 900;
+    color: #fff;
+    margin-top: 1.5vw;
+    letter-spacing: 0.05em;
+    text-align: center;
+    min-height: 1.2em;
+    padding: 0 8px;
+  }
+
+  #status {
+    position: fixed;
+    bottom: 16px;
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    color: #222;
+    transition: color 1s;
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+
+<div id="time">00:00</div>
+<div id="label">aguardando</div>
+<div id="customText"></div>
+<div id="status">aguardando controle...</div>
+
+<script>
+  const timeEl      = document.getElementById('time');
+  const labelEl     = document.getElementById('label');
+  const customEl    = document.getElementById('customText');
+  const statusEl    = document.getElementById('status');
+
+  const channel = new BroadcastChannel('cronometro');
+
+  channel.onmessage = (e) => {
+    const d = e.data;
+    if (d.type !== 'state') return;
+
+    statusEl.textContent = '';
+
+    timeEl.textContent = d.time;
+    timeEl.className = [d.hasHours ? 'has-hours' : '', d.isOvertime ? 'overtime' : '']
+      .filter(Boolean).join(' ');
+
+    labelEl.textContent = d.label;
+    labelEl.className = d.isOvertime ? 'overtime' : '';
+
+    customEl.textContent = d.customText;
+
+    // Apply color overrides
+    if (d.colorBg)       document.body.style.background = d.colorBg;
+    if (d.colorNormal) {
+      timeEl.style.setProperty('--color-normal', d.colorNormal);
+      const els = [timeEl, labelEl, customEl];
+      els.forEach(el => { if (!el.classList.contains('overtime')) el.style.color = d.colorNormal; });
+    }
+    if (d.colorOvertime) {
+      document.documentElement.style.setProperty('--color-overtime', d.colorOvertime);
+      if (d.isOvertime) {
+        timeEl.style.color  = d.colorOvertime;
+        labelEl.style.color = d.colorOvertime;
+      }
+    }
+  };
+</script>
+
+</body>
+</html>

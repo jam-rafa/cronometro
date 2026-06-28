@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Cronômetro</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    font-family: 'Arial Black', Arial, sans-serif;
+  }
+
+  #time {
+    font-size: 30vw;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    transition: font-size 0.3s;
+  }
+  #time.has-hours { font-size: 18vw; }
+  #time.overtime { color: #ff4400; }
+
+  #label {
+    font-size: 4vw;
+    font-weight: 900;
+    color: #fff;
+    margin-top: 1vw;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-align: center;
+    outline: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s, color 0.3s;
+    padding: 0 8px;
+    cursor: text;
+  }
+  #label:focus { border-bottom: 2px solid #555; }
+  #label.overtime { color: #ff4400; }
+
+  #customText {
+    font-size: 3vw;
+    font-weight: 900;
+    color: #fff;
+    margin-top: 1.5vw;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    text-align: center;
+    min-height: 1.2em;
+    cursor: text;
+    outline: none;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s;
+    padding: 0 8px;
+  }
+  #customText:focus { border-bottom: 2px solid #555; }
+
+  #controls {
+    position: fixed;
+    bottom: 24px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  body:hover #controls { opacity: 1; }
+  #controls.hidden {
+    transform: translateY(80px);
+    pointer-events: none;
+    opacity: 0 !important;
+  }
+
+  #toggleBtn {
+    position: fixed;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: transparent;
+    border: 1px solid #333;
+    color: #555;
+    width: 26px;
+    height: 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.3s, color 0.2s, border-color 0.2s;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  body:hover #toggleBtn { opacity: 1; }
+  #toggleBtn:hover { color: #fff; border-color: #666; }
+
+  #controls input[type="number"] {
+    font-size: 18px;
+    width: 64px;
+    text-align: center;
+    background: #222;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 6px;
+    font-family: inherit;
+  }
+  .sep { color: #fff; font-size: 22px; line-height: 38px; }
+
+  #controls button {
+    font-size: 15px;
+    padding: 8px 22px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+  }
+  #btnStart { background: #fff; color: #000; }
+  #btnReset { background: #333; color: #fff; }
+
+  .modeBtn {
+    font-size: 13px;
+    padding: 6px 14px;
+    border-radius: 6px;
+    border: 1px solid #444;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    background: #111;
+    color: #888;
+    letter-spacing: 0.04em;
+  }
+  .modeBtn.active { background: #444; color: #fff; border-color: #666; }
+
+  #durationInputs, #targetInputs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .divider { width: 1px; height: 28px; background: #444; }
+  #clock { color: #888; font-size: 16px; letter-spacing: 0.1em; min-width: 70px; }
+</style>
+</head>
+<body>
+
+<div id="time">00:00</div>
+<div id="label" contenteditable="true" spellcheck="false">aguardando</div>
+<div id="customText"></div>
+
+<div id="controls">
+  <button id="btnModeDuration" class="modeBtn active">Duração</button>
+  <button id="btnModeTarget" class="modeBtn">Horário</button>
+  <div class="divider"></div>
+
+  <div id="durationInputs">
+    <input id="inputHrs" type="number" value="0" min="0" max="99" title="horas">
+    <span class="sep">:</span>
+    <input id="inputMin" type="number" value="5" min="0" max="59" title="minutos">
+    <span class="sep">:</span>
+    <input id="inputSec" type="number" value="0" min="0" max="59" title="segundos">
+  </div>
+
+  <div id="targetInputs" style="display:none">
+    <input id="inputTargetHr"  type="number" value="19" min="0" max="23" title="hora alvo">
+    <span class="sep">:</span>
+    <input id="inputTargetMin" type="number" value="0"  min="0" max="59" title="minuto alvo">
+    <span class="sep">:</span>
+    <input id="inputTargetSec" type="number" value="0"  min="0" max="59" title="segundo alvo">
+  </div>
+
+  <button id="btnStart">Iniciar</button>
+  <button id="btnReset">Reset</button>
+  <div class="divider"></div>
+  <span id="clock">00:00:00</span>
+</div>
+
+<button id="toggleBtn" title="Esconder/mostrar opções">▼</button>
+
+<script>
+  let total = 0, remaining = 0, overtime = 0;
+  let running = false, isOvertime = false;
+  let interval = null;
+  let userEditedLabel = false;
+  let mode = 'duration'; // 'duration' | 'target'
+
+  const timeEl          = document.getElementById('time');
+  const labelEl         = document.getElementById('label');
+  const btnStart        = document.getElementById('btnStart');
+  const btnReset        = document.getElementById('btnReset');
+  const inputHrs        = document.getElementById('inputHrs');
+  const inputMin        = document.getElementById('inputMin');
+  const inputSec        = document.getElementById('inputSec');
+  const clockEl         = document.getElementById('clock');
+  const btnModeDuration = document.getElementById('btnModeDuration');
+  const btnModeTarget   = document.getElementById('btnModeTarget');
+  const durationInputs  = document.getElementById('durationInputs');
+  const targetInputs    = document.getElementById('targetInputs');
+  const inputTargetHr   = document.getElementById('inputTargetHr');
+  const inputTargetMin  = document.getElementById('inputTargetMin');
+  const inputTargetSec  = document.getElementById('inputTargetSec');
+
+  labelEl.addEventListener('input', () => { userEditedLabel = true; });
+
+  btnModeDuration.addEventListener('click', () => {
+    if (running) return;
+    mode = 'duration';
+    btnModeDuration.classList.add('active');
+    btnModeTarget.classList.remove('active');
+    durationInputs.style.display = 'flex';
+    targetInputs.style.display = 'none';
+    reset();
+  });
+
+  btnModeTarget.addEventListener('click', () => {
+    if (running) return;
+    mode = 'target';
+    btnModeTarget.classList.add('active');
+    btnModeDuration.classList.remove('active');
+    durationInputs.style.display = 'none';
+    targetInputs.style.display = 'flex';
+    reset();
+  });
+
+  const customTextEl = document.getElementById('customText');
+
+  function updateClock() {
+    const now = new Date();
+    const t = [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map(n => String(n).padStart(2,'0')).join(':');
+    clockEl.textContent = t;
+    customTextEl.textContent = t;
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  function fmt(s) {
+    const h   = Math.floor(s / 3600);
+    const m   = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) {
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+    }
+    return `${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+
+  function showTime(s) {
+    const hasHours = s >= 3600;
+    timeEl.classList.toggle('has-hours', hasHours);
+    timeEl.textContent = fmt(s);
+  }
+
+  function setLabel(text) {
+    if (!userEditedLabel) labelEl.textContent = text;
+  }
+
+  function tick() {
+    if (!isOvertime) {
+      remaining--;
+      if (remaining <= 0) {
+        remaining = 0;
+        isOvertime = true;
+        timeEl.classList.add('overtime');
+        labelEl.classList.add('overtime');
+      }
+      showTime(remaining);
+      if (!isOvertime) setLabel(remaining <= 10 ? `${remaining}s` : 'em andamento');
+    }
+
+    if (isOvertime) {
+      overtime++;
+      showTime(overtime);
+      setLabel(`+${fmt(overtime)} além do previsto`);
+    }
+  }
+
+  function secondsUntilTarget() {
+    const now = new Date();
+    const target = new Date();
+    target.setHours(parseInt(inputTargetHr.value)  || 0);
+    target.setMinutes(parseInt(inputTargetMin.value) || 0);
+    target.setSeconds(parseInt(inputTargetSec.value) || 0);
+    target.setMilliseconds(0);
+    return Math.round((target - now) / 1000);
+  }
+
+  function setAllInputsDisabled(disabled) {
+    inputHrs.disabled       = disabled;
+    inputMin.disabled       = disabled;
+    inputSec.disabled       = disabled;
+    inputTargetHr.disabled  = disabled;
+    inputTargetMin.disabled = disabled;
+    inputTargetSec.disabled = disabled;
+  }
+
+  function start() {
+    if (running) {
+      clearInterval(interval);
+      running = false;
+      btnStart.textContent = 'Continuar';
+      setLabel('pausado');
+      return;
+    }
+
+    if (!isOvertime && remaining === 0 && total === 0) {
+      if (mode === 'duration') {
+        const h = parseInt(inputHrs.value) || 0;
+        const m = parseInt(inputMin.value) || 0;
+        const s = parseInt(inputSec.value) || 0;
+        total = h * 3600 + m * 60 + s;
+        if (total <= 0) return;
+        remaining = total;
+        showTime(remaining);
+      } else {
+        const diff = secondsUntilTarget();
+        if (diff <= 0) {
+          // already past the target — start in overtime immediately
+          isOvertime = true;
+          overtime = -diff;
+          timeEl.classList.add('overtime');
+          labelEl.classList.add('overtime');
+          showTime(overtime);
+          setLabel(`+${fmt(overtime)} além do previsto`);
+        } else {
+          total = diff;
+          remaining = diff;
+          showTime(remaining);
+        }
+      }
+    }
+
+    running = true;
+    btnStart.textContent = 'Pausar';
+    if (!isOvertime) setLabel('em andamento');
+    setAllInputsDisabled(true);
+    interval = setInterval(tick, 1000);
+  }
+
+  function reset() {
+    clearInterval(interval);
+    running = false; isOvertime = false;
+    remaining = 0; total = 0; overtime = 0;
+    userEditedLabel = false;
+    timeEl.textContent = '00:00';
+    timeEl.classList.remove('overtime', 'has-hours');
+    labelEl.classList.remove('overtime');
+    labelEl.textContent = 'aguardando';
+    btnStart.textContent = 'Iniciar';
+    setAllInputsDisabled(false);
+  }
+
+  btnStart.addEventListener('click', start);
+  btnReset.addEventListener('click', reset);
+
+  const controls = document.getElementById('controls');
+  const toggleBtn = document.getElementById('toggleBtn');
+  let controlsHidden = false;
+
+  toggleBtn.addEventListener('click', () => {
+    controlsHidden = !controlsHidden;
+    controls.classList.toggle('hidden', controlsHidden);
+    toggleBtn.textContent = controlsHidden ? '▲' : '▼';
+    toggleBtn.title = controlsHidden ? 'Mostrar opções' : 'Esconder opções';
+  });
+</script>
+</body>
+</html>

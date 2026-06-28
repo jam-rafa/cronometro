@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Controle — Cronômetro</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #111;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: #1a1a1a;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  header h1 {
+    font-size: 13px;
+    color: #555;
+    font-weight: normal;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+  #clockHeader {
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    color: #fff;
+    font-family: 'Arial Black', Arial, sans-serif;
+  }
+  #btnOpenDisplay {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.05em;
+    transition: background 0.2s;
+  }
+  #btnOpenDisplay:hover { background: #1d4ed8; }
+
+  /* ── MAIN LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── PREVIEW (left column) ── */
+  .preview-panel {
+    width: 380px;
+    min-width: 280px;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+    position: relative;
+    border-right: 1px solid #222;
+    flex-shrink: 0;
+  }
+  .preview-tag {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    font-size: 10px;
+    color: #333;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+  #previewTime {
+    font-size: 90px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    text-align: center;
+    font-family: 'Arial Black', Arial, sans-serif;
+    letter-spacing: -0.02em;
+    transition: font-size 0.3s, color 0.3s;
+  }
+  #previewTime.has-hours { font-size: 60px; }
+  #previewTime.overtime  { color: #ff4400; }
+  #previewLabel {
+    font-size: 20px;
+    font-weight: 900;
+    color: #fff;
+    margin-top: 10px;
+    text-transform: uppercase;
+    text-align: center;
+    font-family: 'Arial Black', Arial, sans-serif;
+    letter-spacing: 0.05em;
+    transition: color 0.3s;
+  }
+  #previewLabel.overtime { color: #ff4400; }
+  #previewCustom {
+    font-size: 14px;
+    font-weight: bold;
+    color: #666;
+    margin-top: 8px;
+    text-align: center;
+    font-family: 'Arial Black', Arial, sans-serif;
+    letter-spacing: 0.05em;
+    min-height: 1.4em;
+  }
+
+  /* ── CONTROL PANEL (right column) ── */
+  .control-panel {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    overflow-y: auto;
+  }
+
+  .section {
+    background: #1a1a1a;
+    border: 1px solid #2a2a2a;
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .section-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #555;
+    margin-bottom: 14px;
+  }
+
+  /* Mode buttons */
+  .mode-row { display: flex; gap: 8px; }
+  .modeBtn {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #333;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+    background: #111;
+    color: #555;
+    transition: all 0.15s;
+    letter-spacing: 0.05em;
+  }
+  .modeBtn:not(:disabled):hover { border-color: #555; color: #aaa; }
+  .modeBtn.active { background: #2a2a2a; color: #fff; border-color: #555; }
+  .modeBtn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Time inputs */
+  .time-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .time-inputs input[type="number"] {
+    flex: 1;
+    font-size: 32px;
+    text-align: center;
+    background: #222;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 10px 6px;
+    font-family: 'Arial Black', Arial, sans-serif;
+    font-weight: 900;
+    transition: border-color 0.2s;
+  }
+  .time-inputs input[type="number"]:focus { outline: none; border-color: #555; }
+  .time-inputs input:disabled { opacity: 0.4; cursor: not-allowed; }
+  .time-sep { font-size: 32px; color: #444; font-weight: 900; }
+
+  /* Action buttons */
+  .action-row { display: flex; gap: 10px; }
+  #btnStart {
+    flex: 2;
+    font-size: 22px;
+    padding: 18px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    font-weight: 900;
+    background: #fff;
+    color: #000;
+    font-family: 'Arial Black', Arial, sans-serif;
+    letter-spacing: 0.05em;
+    transition: background 0.2s;
+  }
+  #btnStart:hover { background: #e8e8e8; }
+  #btnStart.pausar { background: #eab308; color: #000; }
+  #btnStart.pausar:hover { background: #ca9b00; }
+  #btnReset {
+    flex: 1;
+    font-size: 16px;
+    padding: 18px;
+    border-radius: 8px;
+    border: 1px solid #333;
+    cursor: pointer;
+    font-weight: bold;
+    background: #1a1a1a;
+    color: #aaa;
+    transition: all 0.2s;
+  }
+  #btnReset:hover { background: #2a2a2a; color: #fff; border-color: #555; }
+
+  /* Text fields */
+  .field-label {
+    display: block;
+    font-size: 11px;
+    color: #555;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .field-group { margin-bottom: 14px; }
+  .field-group:last-child { margin-bottom: 0; }
+  .text-input {
+    width: 100%;
+    background: #222;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+  .text-input:focus { outline: none; border-color: #555; }
+
+  /* Clock toggle */
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 4px;
+  }
+  .toggle-row label {
+    font-size: 13px;
+    color: #777;
+    cursor: pointer;
+    user-select: none;
+  }
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #2563eb;
+  }
+
+  /* Colors section */
+  .color-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+  .color-row:last-child { margin-bottom: 0; }
+  .color-row span { font-size: 13px; color: #777; }
+  .color-row input[type="color"] {
+    width: 44px;
+    height: 30px;
+    border: 1px solid #444;
+    border-radius: 5px;
+    cursor: pointer;
+    background: none;
+    padding: 2px;
+  }
+
+  /* Scrollbar */
+  .control-panel::-webkit-scrollbar { width: 6px; }
+  .control-panel::-webkit-scrollbar-track { background: #111; }
+  .control-panel::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Controle — Cronômetro</h1>
+  <span id="clockHeader">00:00:00</span>
+  <button id="btnOpenDisplay">Abrir Tela de Display ↗</button>
+</header>
+
+<div class="main">
+
+  <!-- PREVIEW -->
+  <div class="preview-panel">
+    <span class="preview-tag">Preview</span>
+    <div id="previewTime">00:00</div>
+    <div id="previewLabel">aguardando</div>
+    <div id="previewCustom"></div>
+  </div>
+
+  <!-- CONTROLES -->
+  <div class="control-panel">
+
+    <!-- Modo + Tempo -->
+    <div class="section">
+      <div class="section-title">Modo &amp; Tempo</div>
+      <div class="mode-row">
+        <button id="btnModeDuration" class="modeBtn active">Duração</button>
+        <button id="btnModeTarget"   class="modeBtn">Horário Alvo</button>
+      </div>
+
+      <div id="durationInputs" class="time-inputs">
+        <input id="inputHrs" type="number" value="0" min="0" max="99" title="horas">
+        <span class="time-sep">:</span>
+        <input id="inputMin" type="number" value="5" min="0" max="59" title="minutos">
+        <span class="time-sep">:</span>
+        <input id="inputSec" type="number" value="0" min="0" max="59" title="segundos">
+      </div>
+
+      <div id="targetInputs" class="time-inputs" style="display:none">
+        <input id="inputTargetHr"  type="number" value="19" min="0" max="23" title="hora">
+        <span class="time-sep">:</span>
+        <input id="inputTargetMin" type="number" value="0"  min="0" max="59" title="minuto">
+        <span class="time-sep">:</span>
+        <input id="inputTargetSec" type="number" value="0"  min="0" max="59" title="segundo">
+      </div>
+    </div>
+
+    <!-- Iniciar / Reset -->
+    <div class="section">
+      <div class="section-title">Controles</div>
+      <div class="action-row">
+        <button id="btnStart">Iniciar</button>
+        <button id="btnReset">Reset</button>
+      </div>
+    </div>
+
+    <!-- Textos -->
+    <div class="section">
+      <div class="section-title">Textos na Tela</div>
+
+      <div class="field-group">
+        <span class="field-label">Rótulo (abaixo do tempo)</span>
+        <input type="text" id="inputLabel" class="text-input" value="aguardando" placeholder="Texto do rótulo...">
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Texto personalizado (linha de baixo)</span>
+        <input type="text" id="inputCustom" class="text-input" placeholder="Texto extra..." disabled>
+        <div class="toggle-row" style="margin-top:8px">
+          <input type="checkbox" id="chkShowClock" checked>
+          <label for="chkShowClock">Mostrar relógio atual como texto personalizado</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cores -->
+    <div class="section">
+      <div class="section-title">Cores</div>
+      <div class="color-row">
+        <span>Cor do texto normal</span>
+        <input type="color" id="colorNormal" value="#ffffff">
+      </div>
+      <div class="color-row">
+        <span>Cor do overtime</span>
+        <input type="color" id="colorOvertime" value="#ff4400">
+      </div>
+      <div class="color-row">
+        <span>Cor de fundo</span>
+        <input type="color" id="colorBg" value="#000000">
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const channel = new BroadcastChannel('cronometro');
+
+  // Timer state
+  let total = 0, remaining = 0, overtime = 0;
+  let running = false, isOvertime = false;
+  let interval = null;
+  let mode = 'duration';
+  let clockStr = '00:00:00';
+
+  // Colors
+  let colorNormal  = '#ffffff';
+  let colorOvt     = '#ff4400';
+  let colorBg      = '#000000';
+
+  // DOM
+  const previewTime   = document.getElementById('previewTime');
+  const previewLabel  = document.getElementById('previewLabel');
+  const previewCustom = document.getElementById('previewCustom');
+  const clockHeader   = document.getElementById('clockHeader');
+  const btnStart      = document.getElementById('btnStart');
+  const btnReset      = document.getElementById('btnReset');
+  const inputHrs      = document.getElementById('inputHrs');
+  const inputMin      = document.getElementById('inputMin');
+  const inputSec      = document.getElementById('inputSec');
+  const inputTargetHr  = document.getElementById('inputTargetHr');
+  const inputTargetMin = document.getElementById('inputTargetMin');
+  const inputTargetSec = document.getElementById('inputTargetSec');
+  const inputLabel    = document.getElementById('inputLabel');
+  const inputCustom   = document.getElementById('inputCustom');
+  const chkShowClock  = document.getElementById('chkShowClock');
+  const durationInputs  = document.getElementById('durationInputs');
+  const targetInputs    = document.getElementById('targetInputs');
+  const btnModeDuration = document.getElementById('btnModeDuration');
+  const btnModeTarget   = document.getElementById('btnModeTarget');
+
+  // ── Clock ──────────────────────────────────────────────────────
+  function updateClock() {
+    const now = new Date();
+    clockStr = [now.getHours(), now.getMinutes(), now.getSeconds()]
+      .map(n => String(n).padStart(2, '0')).join(':');
+    clockHeader.textContent = clockStr;
+    if (chkShowClock.checked) {
+      previewCustom.textContent = clockStr;
+      broadcast();
+    }
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ── Helpers ────────────────────────────────────────────────────
+  function fmt(s) {
+    const h   = Math.floor(s / 3600);
+    const m   = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0)
+      return `${pad(h)}:${pad(m)}:${pad(sec)}`;
+    return `${pad(m)}:${pad(sec)}`;
+  }
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function getCustomText() {
+    return chkShowClock.checked ? clockStr : inputCustom.value;
+  }
+
+  function showTime(s) {
+    const hasHours = s >= 3600;
+    previewTime.classList.toggle('has-hours', hasHours);
+    previewTime.textContent = fmt(s);
+  }
+
+  function syncLabel(text) {
+    previewLabel.textContent = text;
+    inputLabel.value = text;
+  }
+
+  function broadcast() {
+    channel.postMessage({
+      type: 'state',
+      time: previewTime.textContent,
+      label: previewLabel.textContent,
+      customText: getCustomText(),
+      isOvertime,
+      hasHours: previewTime.classList.contains('has-hours'),
+      colorNormal,
+      colorOvertime: colorOvt,
+      colorBg,
+    });
+  }
+
+  // ── Text field sync ────────────────────────────────────────────
+  inputLabel.addEventListener('input', () => {
+    previewLabel.textContent = inputLabel.value;
+    broadcast();
+  });
+
+  inputCustom.addEventListener('input', () => {
+    if (!chkShowClock.checked) {
+      previewCustom.textContent = inputCustom.value;
+      broadcast();
+    }
+  });
+
+  chkShowClock.addEventListener('change', () => {
+    inputCustom.disabled = chkShowClock.checked;
+    previewCustom.textContent = getCustomText();
+    broadcast();
+  });
+
+  // ── Color sync ─────────────────────────────────────────────────
+  document.getElementById('colorNormal').addEventListener('input', (e) => {
+    colorNormal = e.target.value;
+    broadcast();
+  });
+  document.getElementById('colorOvertime').addEventListener('input', (e) => {
+    colorOvt = e.target.value;
+    broadcast();
+  });
+  document.getElementById('colorBg').addEventListener('input', (e) => {
+    colorBg = e.target.value;
+    broadcast();
+  });
+
+  // ── Timer logic ────────────────────────────────────────────────
+  function tick() {
+    if (!isOvertime) {
+      remaining--;
+      if (remaining <= 0) {
+        remaining = 0;
+        isOvertime = true;
+        previewTime.classList.add('overtime');
+        previewLabel.classList.add('overtime');
+      }
+      showTime(remaining);
+      if (!isOvertime) {
+        const auto = remaining <= 10 ? `${remaining}s` : 'em andamento';
+        syncLabel(auto);
+      }
+    }
+
+    if (isOvertime) {
+      overtime++;
+      showTime(overtime);
+      syncLabel(`+${fmt(overtime)} além do previsto`);
+    }
+
+    previewCustom.textContent = getCustomText();
+    broadcast();
+  }
+
+  function secondsUntilTarget() {
+    const now = new Date();
+    const t   = new Date();
+    t.setHours(parseInt(inputTargetHr.value) || 0);
+    t.setMinutes(parseInt(inputTargetMin.value) || 0);
+    t.setSeconds(parseInt(inputTargetSec.value) || 0);
+    t.setMilliseconds(0);
+    return Math.round((t - now) / 1000);
+  }
+
+  function setInputsDisabled(v) {
+    inputHrs.disabled = inputMin.disabled = inputSec.disabled = v;
+    inputTargetHr.disabled = inputTargetMin.disabled = inputTargetSec.disabled = v;
+    btnModeDuration.disabled = btnModeTarget.disabled = v;
+  }
+
+  function start() {
+    if (running) {
+      clearInterval(interval);
+      running = false;
+      btnStart.textContent = 'Continuar';
+      btnStart.classList.remove('pausar');
+      syncLabel('pausado');
+      broadcast();
+      return;
+    }
+
+    if (!isOvertime && remaining === 0 && total === 0) {
+      if (mode === 'duration') {
+        const h = parseInt(inputHrs.value) || 0;
+        const m = parseInt(inputMin.value) || 0;
+        const s = parseInt(inputSec.value) || 0;
+        total = h * 3600 + m * 60 + s;
+        if (total <= 0) return;
+        remaining = total;
+        showTime(remaining);
+      } else {
+        const diff = secondsUntilTarget();
+        if (diff <= 0) {
+          isOvertime = true;
+          overtime   = -diff;
+          previewTime.classList.add('overtime');
+          previewLabel.classList.add('overtime');
+          showTime(overtime);
+          syncLabel(`+${fmt(overtime)} além do previsto`);
+        } else {
+          total = diff;
+          remaining = diff;
+          showTime(remaining);
+        }
+      }
+    }
+
+    running = true;
+    btnStart.textContent = 'Pausar';
+    btnStart.classList.add('pausar');
+    if (!isOvertime) syncLabel('em andamento');
+    setInputsDisabled(true);
+    interval = setInterval(tick, 1000);
+    broadcast();
+  }
+
+  function reset() {
+    clearInterval(interval);
+    running = false; isOvertime = false;
+    remaining = 0; total = 0; overtime = 0;
+    previewTime.textContent = '00:00';
+    previewTime.className = '';
+    previewLabel.className = '';
+    syncLabel('aguardando');
+    btnStart.textContent = 'Iniciar';
+    btnStart.classList.remove('pausar');
+    setInputsDisabled(false);
+    previewCustom.textContent = getCustomText();
+    broadcast();
+  }
+
+  btnStart.addEventListener('click', start);
+  btnReset.addEventListener('click', reset);
+
+  btnModeDuration.addEventListener('click', () => {
+    if (running) return;
+    mode = 'duration';
+    btnModeDuration.classList.add('active');
+    btnModeTarget.classList.remove('active');
+    durationInputs.style.display = 'flex';
+    targetInputs.style.display   = 'none';
+    reset();
+  });
+
+  btnModeTarget.addEventListener('click', () => {
+    if (running) return;
+    mode = 'target';
+    btnModeTarget.classList.add('active');
+    btnModeDuration.classList.remove('active');
+    durationInputs.style.display = 'none';
+    targetInputs.style.display   = 'flex';
+    reset();
+  });
+
+  document.getElementById('btnOpenDisplay').addEventListener('click', () => {
+    window.open('display.html', 'cronometro-display');
+    setTimeout(broadcast, 500);
+  });
+
+  // Broadcast initial state
+  broadcast();
+</script>
+
+</body>
+</html>
